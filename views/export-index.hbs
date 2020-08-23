@@ -1,0 +1,107 @@
+{{!< layout}}
+
+<script>
+  AP.request('/rest/api/content/{{contentId}}?expand=body.storage')
+    .then((data) => {
+      const rawContent = JSON.parse(data.body).body.storage.value;
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(`
+      <root
+        xmlns:ac="http://www.w3.org/TR/html4/"
+        xmlns:ri="http://www.w3.org/TR/html4/"
+      >
+        ${rawContent}
+      </root>
+      `, "text/html");
+
+      let markdown = 
+        JSON.parse(data.body).title + "\n===\n" +
+        node2markdown(xmlDoc) +
+        "\n";
+      document.getElementById("markdown").innerText = markdown;
+    });
+
+    function node2markdown(node) {
+      let ref = "";
+      ref += renderNode(node);
+      for(var i = 0, count = node.children.length; i < count; i++) {
+        ref += node2markdown(node.children[i]);
+      }
+      return ref;
+    }
+
+    function tableContext(node) {
+      return ["td", "th"].includes(node.parentNode.nodeName.toLowerCase()) ||
+        ["td", "th"].includes(node.parentNode.parentNode.nodeName.toLowerCase());
+    }
+
+    function nodeRendererP(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : textContent + "\n";
+    }
+
+    function nodeRendererH1(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : "# " + textContent + "\n";
+    }
+
+    function nodeRendererH2(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : "## " + textContent + "\n";
+    }
+
+    function nodeRendererH3(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : "### " + textContent + "\n";
+    }
+
+    function nodeRendererCode(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : "`" + textContent + "`";
+    }
+
+    function nodeRendererLi(textContent, node) {
+      return node.children.length || tableContext(node) ? "" : "- " + textContent + "\n";
+    }
+
+    function nodeRendererAcPlainTextBody(textContent, node) {
+      console.log(node.innerHTML.replace('<!--[CDATA[', '').replace(']]-->', ''));
+      return "```\n" + node.innerHTML.replace('<!--[CDATA[', '').replace(']]-->', '') + "\n```\n";
+    }
+
+    function nodeRendererTable(textContent, node) {
+      let rendered = "";
+      let header = [];
+      let sep = [];
+      let rows = [];
+      for(var i = 0, count = node.children[0].children.length; i < count; i++) {
+        const nodeRow = node.children[0].children[i];
+        if (header.length === 0) {
+          header = [...nodeRow.children].map((n) => n.textContent);
+          sep = [...nodeRow.children].map((n) => "---");
+        } else {
+          rows.push(
+            [...nodeRow.children].map((n) => n.textContent)
+          );
+        }
+      }
+      return "\n" + header.join(" | ") + "\n" + sep.join(" | ") + "\n" + rows.map((r) => r.join(" | ")).join("\n") + "\n";
+    }
+
+    function renderNode(node) {
+      const map = {
+        "p": nodeRendererP.bind(this),
+        "h1": nodeRendererH1.bind(this),
+        "h2": nodeRendererH2.bind(this),
+        "h3": nodeRendererH3.bind(this),
+        "code": nodeRendererCode.bind(this),
+        "li": nodeRendererLi.bind(this),
+        "table": nodeRendererTable.bind(this),
+        "ac:plain-text-body": nodeRendererAcPlainTextBody.bind(this),
+      };
+
+      if (map[node.nodeName.toLowerCase()]) {
+        return map[node.nodeName.toLowerCase()](node.textContent, node);
+      } else {
+        console.log(node.nodeName, "not handled");
+      }
+
+      return "";
+    }
+</script>
+<code id="markdown"></code>

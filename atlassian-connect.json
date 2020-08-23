@@ -1,0 +1,44 @@
+{
+    "key": "confluence2markdown",
+    "name": "Confluence2Markdown",
+    "description": "Confluence to markdown exporter",
+    "baseUrl": "{{localBaseUrl}}",
+    "authentication": {
+        "type": "jwt"
+    },
+    "lifecycle": {
+        "installed": "/installed"
+    },
+    "scopes": [
+        "READ"
+    ],
+    "modules": {
+        "webItems": [
+          {
+            "location": "system.content.action/secondary",
+            "weight": 200,
+            "styleClasses": [
+              "webitem",
+              "system-present-webitem"
+            ],
+            "url": "/export-index?space={space.id}&contentId={content.id}&spaceKey={space.key}",
+            "context": "addon",
+            "target": {
+              "type": "dialog"
+            },
+            "tooltip": {
+              "value": "Example tooltip"
+            },
+            "icon": {
+              "width": 16,
+              "height": 16,
+              "url": "/maps/icon.png"
+            },
+            "name": {
+              "value": "Export to Markdown"
+            },
+            "key": "confluence2markdown-action"
+          }
+        ]
+    }
+}
